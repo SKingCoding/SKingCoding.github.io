@@ -1,0 +1,22 @@
+export const QUESTIONS = [
+  "Who is the most mentally unstable person here?",
+  "Who would survive the longest in a zombie apocalypse?",
+  "Who is most likely to go viral for something embarrassing?",
+  "Who would make the best reality TV star?",
+  "Who is the worst at keeping secrets?",
+  "Who would you trust least with your phone unlocked?",
+  "Who is most likely to start a cult?",
+  "Who is the most dramatic?",
+  "Who would be the worst to be stranded with on a desert island?",
+  "Who is most likely to get arrested for something silly?",
+  "Who would be the worst roommate?",
+  "Who is most likely to become a millionaire?",
+  "Who would be the worst at running a country?",
+  "Who is most likely to become famous?",
+  "Who would be the worst at surviving in the wilderness?",
+  "Who is most likely to become a supervillain?",
+  "Who would be the worst at keeping a plant alive?",
+  "Who is most likely to win a Nobel Prize?",
+  "Who would be the worst at planning a surprise party?",
+  "Who is most likely to become a social media influencer?"
+]; 
