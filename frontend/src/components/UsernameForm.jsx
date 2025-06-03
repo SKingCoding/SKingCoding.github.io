@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
-export default function UsernameForm({ onSubmit }) {
+function UsernameForm({ onSubmit }) {
   const [username, setUsername] = useState('');
 
   const handleSubmit = (e) => {
@@ -15,33 +15,32 @@ export default function UsernameForm({ onSubmit }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white p-8 rounded-lg shadow-xl max-w-md w-full"
+      exit={{ opacity: 0, y: -20 }}
+      className="username-form"
     >
-      <h2 className="text-3xl font-bold text-center mb-8">Welcome to Party Game!</h2>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-            Choose your username
-          </label>
-          <input
-            type="text"
-            id="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter username"
-            required
-          />
-        </div>
+      <h2>Enter Your Username</h2>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Username"
+          className="username-input"
+          maxLength={20}
+          required
+        />
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+          className="submit-btn"
+          disabled={!username.trim()}
         >
           Continue
         </motion.button>
       </form>
     </motion.div>
   );
-} 
+}
+
+export default UsernameForm; 
