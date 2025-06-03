@@ -9,21 +9,25 @@ const app = express();
 app.use(cors({
   origin: [
     "http://localhost:3000",
-    "https://*.github.io",
-    "https://*.onrender.com"
+    "https://skingcoding.github.io",
+    "https://party-game-backend.onrender.com"
   ],
-  credentials: true
+  credentials: true,
+  methods: ["GET", "POST"]
 }));
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
       "http://localhost:3000",
-      "https://*.github.io",
-      "https://*.onrender.com"
+      "https://skingcoding.github.io",
+      "https://party-game-backend.onrender.com"
     ],
-    credentials: true
-  }
+    methods: ["GET", "POST"],
+    credentials: true,
+    transports: ['websocket', 'polling']
+  },
+  allowEIO3: true
 });
 
 const lobbies = {};

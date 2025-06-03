@@ -1,70 +1,116 @@
 import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import UsernameForm from './components/UsernameForm';
 import LobbyOptions from './components/LobbyOptions';
 import Lobby from './components/Lobby';
 import Game from './components/Game';
+import './App.css';
 
 const BACKEND_URL = 'https://party-game-backend.onrender.com';
-const socket = io(BACKEND_URL);
+const socket = io(BACKEND_URL, {
+  transports: ['websocket', 'polling'],
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  timeout: 10000,
+  withCredentials: true
+});
 
 export default function App() {
   const [username, setUsername] = useState('');
-  const [gameState, setGameState] = useState('username'); // username -> lobbyOptions -> lobby -> game
+  const [gameState, setGameState] = useState(null);
   const [lobby, setLobby] = useState(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
+    console.log('Initializing socket connection...');
+    
+    socket.on('connect', () => {
+      console.log('Socket connected successfully!', socket.id);
+      setIsConnected(true);
+      setError(null);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      setError('Failed to connect to game server. Please try again later.');
+      setIsConnected(false);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      setIsConnected(false);
+      if (reason === 'io server disconnect') {
+        setError('Disconnected from server. Please refresh the page.');
+      }
+    });
+
     socket.on('lobbyUpdate', (updatedLobby) => {
+      console.log('Received lobby update:', updatedLobby);
       setLobby(updatedLobby);
     });
 
-    socket.on('gameStarted', (gameLobby) => {
-      setLobby(gameLobby);
-      setGameState('game');
+    socket.on('gameState', (state) => {
+      console.log('Received game state update:', state);
+      setGameState(state);
     });
 
-    socket.on('gameEnded', (gameLobby) => {
-      setLobby(gameLobby);
-      setGameState('lobby');
+    socket.on('error', (errorMessage) => {
+      console.error('Received error from server:', errorMessage);
+      setError(errorMessage);
     });
 
     return () => {
+      console.log('Cleaning up socket connection...');
+      socket.off('connect');
+      socket.off('connect_error');
+      socket.off('disconnect');
       socket.off('lobbyUpdate');
-      socket.off('gameStarted');
-      socket.off('gameEnded');
+      socket.off('gameState');
+      socket.off('error');
     };
   }, []);
 
   const handleUsernameSubmit = (name) => {
+    console.log('Submitting username:', name);
     setUsername(name);
-    setGameState('lobbyOptions');
+    setError(null);
   };
 
   const handleCreateLobby = () => {
+    console.log('Creating new lobby...');
+    if (!isConnected) {
+      console.error('Cannot create lobby: Socket not connected');
+      setError('Not connected to server. Please refresh the page.');
+      return;
+    }
+    setError(null);
     socket.emit('createLobby', { username }, (response) => {
+      console.log('Create lobby response:', response);
       if (response.error) {
+        console.error('Error creating lobby:', response.error);
         setError(response.error);
-      } else {
-        setLobby(response);
-        setGameState('lobby');
       }
     });
   };
 
-  const handleJoinLobby = () => {
-    const code = prompt('Enter lobby code:');
-    if (code) {
-      socket.emit('joinLobby', { code, username }, (response) => {
-        if (response.error) {
-          setError(response.error);
-        } else {
-          setLobby(response);
-          setGameState('lobby');
-        }
-      });
+  const handleJoinLobby = (code) => {
+    console.log('Joining lobby:', code);
+    if (!isConnected) {
+      console.error('Cannot join lobby: Socket not connected');
+      setError('Not connected to server. Please refresh the page.');
+      return;
     }
+    setError(null);
+    socket.emit('joinLobby', { code, username }, (response) => {
+      console.log('Join lobby response:', response);
+      if (response.error) {
+        console.error('Error joining lobby:', response.error);
+        setError(response.error);
+      }
+    });
   };
 
   const renderContent = () => {
