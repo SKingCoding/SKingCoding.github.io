@@ -9,11 +9,7 @@ const app = express();
 
 // CORS configuration for Express
 app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "https://skingcoding.github.io",
-    "https://party-game-backend.onrender.com"
-  ],
+  origin: "*", // Allow all origins temporarily for testing
   methods: ["GET", "POST", "OPTIONS"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"]
@@ -24,11 +20,7 @@ const server = http.createServer(app);
 // Socket.IO configuration with CORS
 const io = new Server(server, {
   cors: {
-    origin: [
-      "http://localhost:3000",
-      "https://skingcoding.github.io",
-      "https://party-game-backend.onrender.com"
-    ],
+    origin: "*", // Allow all origins temporarily for testing
     methods: ["GET", "POST", "OPTIONS"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -36,12 +28,18 @@ const io = new Server(server, {
   },
   allowEIO3: true,
   pingTimeout: 60000,
-  pingInterval: 25000
+  pingInterval: 25000,
+  connectTimeout: 45000
 });
 
 // Add a basic health check endpoint
 app.get('/', (req, res) => {
-  res.status(200).json({ status: 'ok' });
+  res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
+
+// Add a socket.io health check endpoint
+app.get('/socket.io/', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Socket.IO is running' });
 });
 
 const lobbies = {};
@@ -55,42 +53,63 @@ function generateLobbyCode() {
   return code;
 }
 
+// Socket.IO connection handling
 io.on("connection", (socket) => {
+  console.log('New client connected:', socket.id);
+  
   let currentLobby = null;
   let currentUser = null;
 
   socket.on("createLobby", ({ username }, cb) => {
-    const code = generateLobbyCode();
-    lobbies[code] = {
-      code,
-      hostId: socket.id,
-      users: [],
-      rounds: 0,
-      currentRound: 0,
-      gameState: "lobby",
-      questions: [...QUESTIONS],
-      roundData: []
-    };
-    currentLobby = code;
-    currentUser = { id: socket.id, username, isHost: true };
-    lobbies[code].users.push(currentUser);
-    socket.join(code);
-    cb({ code, users: lobbies[code].users });
-    io.to(code).emit("lobbyUpdate", lobbies[code]);
+    console.log('Creating lobby for user:', username);
+    try {
+      const code = generateLobbyCode();
+      lobbies[code] = {
+        code,
+        hostId: socket.id,
+        users: [],
+        rounds: 0,
+        currentRound: 0,
+        gameState: "lobby",
+        questions: [...QUESTIONS],
+        roundData: []
+      };
+      currentLobby = code;
+      currentUser = { id: socket.id, username, isHost: true };
+      lobbies[code].users.push(currentUser);
+      socket.join(code);
+      console.log('Lobby created:', code);
+      cb({ code, users: lobbies[code].users });
+      io.to(code).emit("lobbyUpdate", lobbies[code]);
+    } catch (error) {
+      console.error('Error creating lobby:', error);
+      cb({ error: 'Failed to create lobby' });
+    }
   });
 
   socket.on("joinLobby", ({ code, username }, cb) => {
-    const lobby = lobbies[code];
-    if (!lobby) return cb({ error: "Lobby not found" });
-    if (lobby.users.find(u => u.username === username)) {
-      return cb({ error: "Username taken" });
+    console.log('Joining lobby:', code, 'User:', username);
+    try {
+      const lobby = lobbies[code];
+      if (!lobby) {
+        console.log('Lobby not found:', code);
+        return cb({ error: "Lobby not found" });
+      }
+      if (lobby.users.find(u => u.username === username)) {
+        console.log('Username taken:', username);
+        return cb({ error: "Username taken" });
+      }
+      currentLobby = code;
+      currentUser = { id: socket.id, username, isHost: false };
+      lobby.users.push(currentUser);
+      socket.join(code);
+      console.log('User joined lobby:', code);
+      cb({ code, users: lobby.users });
+      io.to(code).emit("lobbyUpdate", lobby);
+    } catch (error) {
+      console.error('Error joining lobby:', error);
+      cb({ error: 'Failed to join lobby' });
     }
-    currentLobby = code;
-    currentUser = { id: socket.id, username, isHost: false };
-    lobby.users.push(currentUser);
-    socket.join(code);
-    cb({ code, users: lobby.users });
-    io.to(code).emit("lobbyUpdate", lobby);
   });
 
   socket.on("setRounds", ({ code, rounds }) => {
@@ -158,14 +177,17 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    console.log('Client disconnected:', socket.id);
     if (currentLobby && lobbies[currentLobby]) {
       const lobby = lobbies[currentLobby];
       lobby.users = lobby.users.filter(u => u.id !== socket.id);
       
       if (lobby.users.length === 0) {
+        console.log('Deleting empty lobby:', currentLobby);
         delete lobbies[currentLobby];
       } else {
         if (lobby.hostId === socket.id) {
+          console.log('Reassigning host in lobby:', currentLobby);
           lobby.hostId = lobby.users[0].id;
           lobby.users[0].isHost = true;
         }
@@ -175,5 +197,9 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => console.log(`Backend running on http://localhost:${PORT}`)); 
+// Log when server starts
+server.listen(process.env.PORT || 4000, () => {
+  console.log(`Server running on port ${process.env.PORT || 4000}`);
+  console.log('CORS enabled for all origins');
+  console.log('Socket.IO server initialized');
+}); 

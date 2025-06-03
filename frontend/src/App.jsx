@@ -16,7 +16,7 @@ const socket = io(BACKEND_URL, {
   reconnection: true,
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
-  timeout: 10000,
+  timeout: 20000,
   withCredentials: true,
   forceNew: true,
   autoConnect: false
@@ -28,56 +28,57 @@ export default function App() {
   const [lobby, setLobby] = useState(null);
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionAttempts, setConnectionAttempts] = useState(0);
 
   useEffect(() => {
     console.log('Initializing socket connection...');
     
     // Connection event handlers
     socket.on('connect', () => {
-      console.log('Socket connected successfully!', socket.id);
+      console.log('Socket connected successfully');
       setIsConnected(true);
       setError(null);
+      setConnectionAttempts(0);
     });
 
     socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
-      setError('Failed to connect to game server. Please try again later.');
       setIsConnected(false);
+      setConnectionAttempts(prev => prev + 1);
+      if (connectionAttempts >= 3) {
+        setError('Failed to connect to game server. Please try again later.');
+      }
     });
 
     socket.on('disconnect', (reason) => {
       console.log('Socket disconnected:', reason);
       setIsConnected(false);
       if (reason === 'io server disconnect') {
-        setError('Disconnected from server. Please refresh the page.');
+        // Server initiated disconnect, try to reconnect
+        socket.connect();
       }
     });
 
     // Game state handlers
     socket.on('lobbyUpdate', (updatedLobby) => {
-      console.log('Received lobby update:', updatedLobby);
+      console.log('Lobby updated:', updatedLobby);
       setLobby(updatedLobby);
-      setGameState('lobby');
     });
 
-    socket.on('gameStarted', (gameLobby) => {
-      console.log('Game started:', gameLobby);
-      setLobby(gameLobby);
+    socket.on('gameStarted', (gameData) => {
+      console.log('Game started:', gameData);
       setGameState('game');
+      setLobby(gameData);
     });
 
-    socket.on('gameEnded', (gameLobby) => {
-      console.log('Game ended:', gameLobby);
-      setLobby(gameLobby);
-      setGameState('lobby');
-    });
-
-    socket.on('error', (errorMessage) => {
-      console.error('Received error from server:', errorMessage);
-      setError(errorMessage);
+    socket.on('gameEnded', () => {
+      console.log('Game ended');
+      setGameState('username');
+      setLobby(null);
     });
 
     // Connect to the server
+    console.log('Attempting to connect to server...');
     socket.connect();
 
     return () => {
@@ -88,50 +89,67 @@ export default function App() {
       socket.off('lobbyUpdate');
       socket.off('gameStarted');
       socket.off('gameEnded');
-      socket.off('error');
       socket.disconnect();
     };
-  }, []);
+  }, [connectionAttempts]);
 
   const handleUsernameSubmit = (name) => {
-    console.log('Submitting username:', name);
+    console.log('Username submitted:', name);
     setUsername(name);
     setGameState('lobbyOptions');
-    setError(null);
   };
 
   const handleCreateLobby = () => {
     console.log('Creating new lobby...');
-    if (!isConnected) {
-      console.error('Cannot create lobby: Socket not connected');
-      setError('Not connected to server. Please refresh the page.');
-      return;
-    }
     setError(null);
     socket.emit('createLobby', { username }, (response) => {
       console.log('Create lobby response:', response);
       if (response.error) {
-        console.error('Error creating lobby:', response.error);
         setError(response.error);
+      } else {
+        setLobby(response);
+        setGameState('lobby');
       }
     });
   };
 
   const handleJoinLobby = (code) => {
     console.log('Joining lobby:', code);
-    if (!isConnected) {
-      console.error('Cannot join lobby: Socket not connected');
-      setError('Not connected to server. Please refresh the page.');
-      return;
-    }
     setError(null);
     socket.emit('joinLobby', { code, username }, (response) => {
       console.log('Join lobby response:', response);
       if (response.error) {
-        console.error('Error joining lobby:', response.error);
         setError(response.error);
+      } else {
+        setLobby(response);
+        setGameState('lobby');
       }
     });
+  };
+
+  const handleSetRounds = (rounds) => {
+    console.log('Setting rounds:', rounds);
+    socket.emit('setRounds', { code: lobby.code, rounds });
+  };
+
+  const handleStartGame = () => {
+    console.log('Starting game...');
+    socket.emit('startGame', { code: lobby.code });
+  };
+
+  const handleFlipCoin = (choice) => {
+    console.log('Flipping coin:', choice);
+    socket.emit('flipCoin', { code: lobby.code, choice });
+  };
+
+  const handleNextRound = () => {
+    console.log('Moving to next round...');
+    socket.emit('nextRound', { code: lobby.code });
+  };
+
+  const handleEndGame = () => {
+    console.log('Ending game...');
+    socket.emit('endGame', { code: lobby.code });
   };
 
   const renderContent = () => {
@@ -155,6 +173,8 @@ export default function App() {
             lobby={lobby}
             username={username}
             isHost={lobby?.hostId === socket.id}
+            onSetRounds={handleSetRounds}
+            onStartGame={handleStartGame}
           />
         );
       
@@ -164,6 +184,9 @@ export default function App() {
             socket={socket}
             lobby={lobby}
             username={username}
+            onFlipCoin={handleFlipCoin}
+            onNextRound={handleNextRound}
+            onEndGame={handleEndGame}
           />
         );
       
@@ -173,17 +196,65 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-200 to-blue-200 flex flex-col items-center justify-center p-4">
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"
-        >
-          {error}
-        </motion.div>
-      )}
-      {renderContent()}
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center p-4">
+      <div className="w-full max-w-4xl">
+        <AnimatePresence mode="wait">
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="bg-red-500 text-white p-4 rounded-lg mb-4 text-center"
+            >
+              {error}
+            </motion.div>
+          )}
+
+          {gameState === 'username' && (
+            <motion.div
+              key="username"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              {renderContent()}
+            </motion.div>
+          )}
+
+          {gameState === 'lobbyOptions' && (
+            <motion.div
+              key="lobby-options"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+            >
+              {renderContent()}
+            </motion.div>
+          )}
+
+          {gameState === 'lobby' && lobby && (
+            <motion.div
+              key="lobby"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+            >
+              {renderContent()}
+            </motion.div>
+          )}
+
+          {gameState === 'game' && lobby && (
+            <motion.div
+              key="game"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+            >
+              {renderContent()}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 } 
