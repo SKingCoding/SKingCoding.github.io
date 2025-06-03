@@ -8,7 +8,9 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/socket.io': {
-        target: 'http://localhost:4000',
+        target: process.env.NODE_ENV === 'production' 
+          ? 'https://party-game-backend.onrender.com'
+          : 'http://localhost:4000',
         ws: true
       }
     }
