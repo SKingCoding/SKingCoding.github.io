@@ -6,8 +6,7 @@ import LobbyOptions from './components/LobbyOptions';
 import Lobby from './components/Lobby';
 import Game from './components/Game';
 
-// Use Raspberry Pi's local IP address
-const BACKEND_URL = 'http://192.168.1.100:4000'; // Replace with your Pi's IP
+const BACKEND_URL = 'https://party-game-backend.onrender.com';
 const socket = io(BACKEND_URL);
 
 export default function App() {
