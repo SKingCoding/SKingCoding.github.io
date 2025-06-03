@@ -8,7 +8,7 @@ import Game from './components/Game';
 import './App.css';
 
 // Use the Render deployment URL
-const BACKEND_URL = 'https://party-game-backend.onrender.com';
+const BACKEND_URL = 'https://party-game-proxy.skingcoding.workers.dev';
 
 // Create socket connection with explicit configuration
 const socket = io(BACKEND_URL, {
@@ -23,7 +23,7 @@ const socket = io(BACKEND_URL, {
   autoConnect: false,
   path: '/socket.io/',
   extraHeaders: {
-    "Access-Control-Allow-Origin": "*"
+    "Access-Control-Allow-Origin": "https://skingcoding.github.io"
   }
 });
 
