@@ -6,16 +6,22 @@ import { v4 as uuidv4 } from "uuid";
 import { QUESTIONS } from "./questions.js";
 
 const app = express();
+
+// CORS configuration for Express
 app.use(cors({
   origin: [
     "http://localhost:3000",
     "https://skingcoding.github.io",
     "https://party-game-backend.onrender.com"
   ],
+  methods: ["GET", "POST", "OPTIONS"],
   credentials: true,
-  methods: ["GET", "POST"]
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
+
 const server = http.createServer(app);
+
+// Socket.IO configuration with CORS
 const io = new Server(server, {
   cors: {
     origin: [
@@ -23,11 +29,19 @@ const io = new Server(server, {
       "https://skingcoding.github.io",
       "https://party-game-backend.onrender.com"
     ],
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "OPTIONS"],
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
     transports: ['websocket', 'polling']
   },
-  allowEIO3: true
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000
+});
+
+// Add a basic health check endpoint
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'ok' });
 });
 
 const lobbies = {};

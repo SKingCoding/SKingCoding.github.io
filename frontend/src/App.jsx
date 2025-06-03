@@ -7,19 +7,24 @@ import Lobby from './components/Lobby';
 import Game from './components/Game';
 import './App.css';
 
+// Use the Render deployment URL
 const BACKEND_URL = 'https://party-game-backend.onrender.com';
+
+// Create socket connection with explicit configuration
 const socket = io(BACKEND_URL, {
   transports: ['websocket', 'polling'],
   reconnection: true,
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
   timeout: 10000,
-  withCredentials: true
+  withCredentials: true,
+  forceNew: true,
+  autoConnect: false
 });
 
 export default function App() {
   const [username, setUsername] = useState('');
-  const [gameState, setGameState] = useState(null);
+  const [gameState, setGameState] = useState('username');
   const [lobby, setLobby] = useState(null);
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -27,6 +32,7 @@ export default function App() {
   useEffect(() => {
     console.log('Initializing socket connection...');
     
+    // Connection event handlers
     socket.on('connect', () => {
       console.log('Socket connected successfully!', socket.id);
       setIsConnected(true);
@@ -47,14 +53,23 @@ export default function App() {
       }
     });
 
+    // Game state handlers
     socket.on('lobbyUpdate', (updatedLobby) => {
       console.log('Received lobby update:', updatedLobby);
       setLobby(updatedLobby);
+      setGameState('lobby');
     });
 
-    socket.on('gameState', (state) => {
-      console.log('Received game state update:', state);
-      setGameState(state);
+    socket.on('gameStarted', (gameLobby) => {
+      console.log('Game started:', gameLobby);
+      setLobby(gameLobby);
+      setGameState('game');
+    });
+
+    socket.on('gameEnded', (gameLobby) => {
+      console.log('Game ended:', gameLobby);
+      setLobby(gameLobby);
+      setGameState('lobby');
     });
 
     socket.on('error', (errorMessage) => {
@@ -62,20 +77,26 @@ export default function App() {
       setError(errorMessage);
     });
 
+    // Connect to the server
+    socket.connect();
+
     return () => {
       console.log('Cleaning up socket connection...');
       socket.off('connect');
       socket.off('connect_error');
       socket.off('disconnect');
       socket.off('lobbyUpdate');
-      socket.off('gameState');
+      socket.off('gameStarted');
+      socket.off('gameEnded');
       socket.off('error');
+      socket.disconnect();
     };
   }, []);
 
   const handleUsernameSubmit = (name) => {
     console.log('Submitting username:', name);
     setUsername(name);
+    setGameState('lobbyOptions');
     setError(null);
   };
 
@@ -123,6 +144,7 @@ export default function App() {
           <LobbyOptions
             onCreateLobby={handleCreateLobby}
             onJoinLobby={handleJoinLobby}
+            error={error}
           />
         );
       
