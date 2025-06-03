@@ -24,7 +24,7 @@ const io = new Server(server, {
     methods: ["GET", "POST", "OPTIONS"],
     credentials: false,
     allowedHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
-    transports: ['polling', 'websocket']
+    transports: ['polling']
   },
   allowEIO3: true,
   pingTimeout: 60000,
@@ -32,7 +32,8 @@ const io = new Server(server, {
   connectTimeout: 45000,
   path: '/socket.io/',
   serveClient: false,
-  cookie: false
+  cookie: false,
+  allowUpgrades: false
 });
 
 // Add a basic health check endpoint
