@@ -12,14 +12,19 @@ const BACKEND_URL = 'https://party-game-backend.onrender.com';
 
 // Create socket connection with explicit configuration
 const socket = io(BACKEND_URL, {
-  transports: ['websocket', 'polling'],
+  transports: ['polling', 'websocket'],
   reconnection: true,
-  reconnectionAttempts: 5,
+  reconnectionAttempts: Infinity,
   reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
   timeout: 20000,
-  withCredentials: true,
+  withCredentials: false,
   forceNew: true,
-  autoConnect: false
+  autoConnect: false,
+  path: '/socket.io/',
+  extraHeaders: {
+    "Access-Control-Allow-Origin": "*"
+  }
 });
 
 export default function App() {

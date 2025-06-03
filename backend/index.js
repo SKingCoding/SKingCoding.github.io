@@ -9,10 +9,10 @@ const app = express();
 
 // CORS configuration for Express
 app.use(cors({
-  origin: "*", // Allow all origins temporarily for testing
+  origin: "*",
   methods: ["GET", "POST", "OPTIONS"],
-  credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"]
+  credentials: false,
+  allowedHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"]
 }));
 
 const server = http.createServer(app);
@@ -20,25 +20,30 @@ const server = http.createServer(app);
 // Socket.IO configuration with CORS
 const io = new Server(server, {
   cors: {
-    origin: "*", // Allow all origins temporarily for testing
+    origin: "*",
     methods: ["GET", "POST", "OPTIONS"],
-    credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
-    transports: ['websocket', 'polling']
+    credentials: false,
+    allowedHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
+    transports: ['polling', 'websocket']
   },
   allowEIO3: true,
   pingTimeout: 60000,
   pingInterval: 25000,
-  connectTimeout: 45000
+  connectTimeout: 45000,
+  path: '/socket.io/',
+  serveClient: false,
+  cookie: false
 });
 
 // Add a basic health check endpoint
 app.get('/', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({ status: 'ok', message: 'Server is running' });
 });
 
 // Add a socket.io health check endpoint
 app.get('/socket.io/', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.status(200).json({ status: 'ok', message: 'Socket.IO is running' });
 });
 
