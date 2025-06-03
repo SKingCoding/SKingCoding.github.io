@@ -7,8 +7,8 @@ import Lobby from './components/Lobby';
 import Game from './components/Game';
 import './App.css';
 
-// Use the Render deployment URL
-const BACKEND_URL = 'https://party-game-proxy.skingcoding.workers.dev';
+// Use the Cloudflare Worker URL
+const BACKEND_URL = 'https://twilight-salad-e6bc.shantanu-narayan117.workers.dev';
 
 // Create socket connection with explicit configuration
 const socket = io(BACKEND_URL, {
@@ -50,7 +50,15 @@ export default function App() {
       console.error('Socket connection error:', error);
       setIsConnected(false);
       setConnectionAttempts(prev => prev + 1);
+      
+      // Try to reconnect with a different transport if polling fails
       if (connectionAttempts >= 3) {
+        console.log('Switching to alternative transport...');
+        socket.io.opts.transports = ['polling'];
+        socket.connect();
+      }
+      
+      if (connectionAttempts >= 5) {
         setError('Failed to connect to game server. Please try again later.');
       }
     });

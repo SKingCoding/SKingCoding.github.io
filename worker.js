@@ -12,7 +12,7 @@ async function handleRequest(request) {
       headers: {
         'Access-Control-Allow-Origin': 'https://skingcoding.github.io',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Access-Control-Allow-Origin',
         'Access-Control-Max-Age': '86400',
       },
     })
@@ -21,7 +21,11 @@ async function handleRequest(request) {
   // Rewrite the request to the backend
   const modifiedRequest = new Request(backendUrl + url.pathname + url.search, {
     method: request.method,
-    headers: request.headers,
+    headers: {
+      ...Object.fromEntries(request.headers),
+      'Origin': backendUrl,
+      'Host': new URL(backendUrl).host,
+    },
     body: request.body,
   })
 
@@ -32,10 +36,19 @@ async function handleRequest(request) {
     // Add CORS headers to the response
     modifiedResponse.headers.set('Access-Control-Allow-Origin', 'https://skingcoding.github.io')
     modifiedResponse.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    modifiedResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    modifiedResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Allow-Origin')
+    modifiedResponse.headers.set('Access-Control-Allow-Credentials', 'false')
     
     return modifiedResponse
   } catch (error) {
-    return new Response('Error: ' + error.message, { status: 500 })
+    return new Response('Error: ' + error.message, { 
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': 'https://skingcoding.github.io',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Access-Control-Allow-Origin',
+        'Access-Control-Allow-Credentials': 'false',
+      }
+    })
   }
 } 
