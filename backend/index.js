@@ -9,18 +9,28 @@ const app = express();
 
 // CORS configuration for Express
 app.use(cors({
-  origin: "*",
+  origin: "https://skingcoding.github.io",
   methods: ["GET", "POST", "OPTIONS"],
   credentials: false,
-  allowedHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"]
+  allowedHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// Add CORS headers to all responses
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://skingcoding.github.io');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Allow-Origin');
+  next();
+});
 
 const server = http.createServer(app);
 
 // Socket.IO configuration with CORS
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: "https://skingcoding.github.io",
     methods: ["GET", "POST", "OPTIONS"],
     credentials: false,
     allowedHeaders: ["Content-Type", "Authorization", "Access-Control-Allow-Origin"],
@@ -38,13 +48,13 @@ const io = new Server(server, {
 
 // Add a basic health check endpoint
 app.get('/', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Origin', 'https://skingcoding.github.io');
   res.status(200).json({ status: 'ok', message: 'Server is running' });
 });
 
 // Add a socket.io health check endpoint
 app.get('/socket.io/', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Origin', 'https://skingcoding.github.io');
   res.status(200).json({ status: 'ok', message: 'Socket.IO is running' });
 });
 
