@@ -9,7 +9,7 @@ import './App.css';
 
 // Use the Cloudflare Worker URL
 // Updated to use new Worker URL
-const BACKEND_URL = 'https://twilight-salad-e6bc.shantanu-narayan117.workers.dev';
+const BACKEND_URL = 'https://party-game-backend-pusy.onrender.com;
 
 // Create socket connection with explicit configuration
 const socket = io(BACKEND_URL, {

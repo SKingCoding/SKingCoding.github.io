@@ -1,1 +1,14 @@
- 
+services:
+  - type: web
+    name: party-game-backend
+    env: node
+    region: oregon # Choose a region closest to your users
+    plan: free # Use the free plan for testing
+    buildCommand: npm install
+    startCommand: node index.js
+    repo: https://github.com/SKingCoding/SKingCoding.github.io
+    branch: main
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: "10000" 
